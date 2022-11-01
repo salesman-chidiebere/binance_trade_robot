@@ -21,12 +21,13 @@ prices = client.get_all_tickers()
 
 last_buy_price = float(prices[11]['price'])
 last_sell_price = float(prices[11]['price'])
-buy_multiplier = 8
-sell_multiplier =  8
-qty = 0.001
+buy_multiplier = 1
+sell_multiplier =  1
+qty = 0.003
+counter = 0
 
 def shift_trade():
-    global last_buy_price, last_sell_price, buy_multiplier, sell_multiplier,qty
+    global last_buy_price, last_sell_price, buy_multiplier, sell_multiplier,qty, counter
 
     get_my_last_trades = client.get_my_trades(symbol='BTCUSDT', limit=1)
     get_usdt_balance = client.get_asset_balance(asset="USDT")
@@ -50,6 +51,7 @@ def shift_trade():
     print(" *  Last Sell Price : " + str(last_sell_price))
     print(" *  Buy Multiplier  : " + str(buy_multiplier))
     print(" *  Sell Multiplier : " + str(sell_multiplier))
+    print(" *  Error counter   : " + str(counter))
     print("")
 
 
@@ -60,15 +62,16 @@ def shift_trade():
             print("Selling 1")
             print("******************************************")
             print("placing order for sell")
-            client.order_market_sell(
+            client.order_limit_sell(
               symbol='BTCUSDT',
               quantity=qty,
-              #price=str(avg_price['price'])
+              price=str(prices[11]['price'])
             )
             last_sell_price = float(prices[11]['price'])
-            sell_multiplier += 8
+            sell_multiplier += 4
             #if buy_multiplier >= 2:
-            buy_multiplier = 8
+            buy_multiplier = 1
+            counter = 0
 
             print("******************************************")
             print("current_price : " + str(float(prices[11]['price'])))
@@ -85,15 +88,16 @@ def shift_trade():
             print("Selling 2")
             print("******************************************")
             print("placing order for sell")
-            client.order_market_sell(
+            client.order_limit_sell(
               symbol='BTCUSDT',
               quantity=qty,
-              #price=str(avg_price['price'])
+              price=str(prices[11]['price'])
             )
             last_sell_price = float(prices[11]['price'])
-            sell_multiplier += 8
+            sell_multiplier += 4
             #if buy_multiplier >= 2:
-            buy_multiplier = 8
+            buy_multiplier = 1
+            counter = 0
 
             print("******************************************")
             print("current_price : " + str(float(prices[11]['price'])))
@@ -109,15 +113,16 @@ def shift_trade():
           print("******************************************")
           print("placing order for buy")
           
-          client.order_market_buy(
+          client.order_limit_buy(
               symbol='BTCUSDT',
               quantity=qty,
-              #price=str(avg_price['price'])
-          )
+              price=str(prices[11]['price'])
+            )
           last_buy_price = float(prices[11]['price'])
-          buy_multiplier += 8
+          buy_multiplier += 4
           #if buy_multiplier >= 2:
-          sell_multiplier = 8
+          sell_multiplier = 1
+          counter = 0
           
 
           print("******************************************")
@@ -137,15 +142,16 @@ def shift_trade():
           print("******************************************")
           print("placing order for buy")
           
-          client.order_market_buy(
+          client.order_limit_buy(
               symbol='BTCUSDT',
               quantity=qty,
-              #price=str(avg_price['price'])
-          )
+              price=str(prices[11]['price'])
+            )
           last_buy_price = float(prices[11]['price'])
-          buy_multiplier += 8
+          buy_multiplier += 4
           #if buy_multiplier >= 2:
-          sell_multiplier = 8
+          sell_multiplier = 1
+          counter = 0
           
 
           print("******************************************")
@@ -155,7 +161,22 @@ def shift_trade():
           print("")
 
 
+def cancel_all_order():
+  OpenOrder = client.get_open_orders(symbol='BTCUSDT')
+  print(orders)
+
+  for pendingOrder in OpenOrder:
+    print (pendingOrder['symbol'])
+    client.cancel_order(
+      symbol='BTCUSDT',
+      orderId= pendingOrder['orderId']
+    )
+
+
+
+
 def main():
+  global last_buy_price, last_sell_price, buy_multiplier, sell_multiplier,qty,counter 
   while True:
     try: 
       print("Scanning...")
@@ -164,9 +185,25 @@ def main():
       
     except Exception as e:
       print(e)
+      counter += 1
+      #if "insufficient balance" in str(e):
+      if counter == 10:
+        print("Insufficient balance... Shifting to new position")
+        print("waiting for 10 sec before re-initializing trade values")
+        time.sleep(10)
+        prices = client.get_all_tickers()
+        last_buy_price = float(prices[11]['price'])
+        last_sell_price = float(prices[11]['price'])
+        buy_multiplier = 1
+        sell_multiplier = 1
+        counter = 0
+
+        cancel_all_order()
 
 
 if __name__ == '__main__':
   main()
+
+
 
 
